@@ -45,16 +45,16 @@ func run(ctx context.Context) (err error) {
 
 	// Create a VPC. Upsert() begins creating the VPC and returns a promise.
 	// Fields on the promise will cause other
-	vpc, err := provider.VPC(ctx, "myvpc", &aws.VPCArgs{
+	vpc, err := provider.Upsert(ctx, "myvpc", &aws.VPC{
 		Name:      "myvpc",
 		CIDRRange: "10.0.0.0/16",
-	}).Upsert()
+	})
 
-	subnet, err := provider.Subnet(ctx, "mysubnet", &aws.SubnetArgs{
+	subnet, err := provider.Upsert(ctx, "mysubnet", &aws.Subnet{
 		Name:      "mysubnet",
 		VPC:       vpc,
 		CIDRRange: "10.0.0.0/24",
-	}).Upsert()
+	})
 
 	// Explicitly wait for the subnet to finish before continuing. This isn't
 	// needed for landscape to work, but could be useful for interacting with
@@ -65,24 +65,20 @@ func run(ctx context.Context) (err error) {
 
 	// Upsert() might take a variadic list of options, such as .Protect().
 	// .Protect would prevent against accidental deletion.
-	igw, err := provider.InternetGateway(ctx, "myinternetgateway", &aws.InternetGatewayArgs{}).
-		Upsert(landscape.Protect())
+	igw, err := provider.Upsert(ctx, "myinternetgateway", &aws.InternetGateway{}, landscape.Protect())
 
-	// We don't call Upsert here - that's a mistake. RouteTable will actually
-	// be a resource that we can potentially call other methods on.
-	// But if we end up not wanting other methods beyond Upsert, then we might
-	// drop the Upsert call from all other resources and use this approach.
-	routeTable, err := provider.RouteTable(ctx, "myroutetable", &aws.RouteTableArgs{
+	routeTable, err := provider.Upsert(ctx, "myroutetable", &aws.RouteTable{
 		Name: "myroutetable",
 	})
 
-	route, err := provider.Route(ctx, "route1", &aws.RouteArgs{
+	route, err := provider.Upsert(ctx, "route1", &aws.Route{
 		RouteTable:  routeTable,
 		Destination: "0.0.0.0/0",
 		NextHop:     igw,
-	}).Upsert()
+	})
 
 	// Now delete the route.
+	// WIP on how this should be exposed.
 	// Unless provider has some delete method, we need to do this on the project
 	// level. Having a GetProject method avoids having to pass both a provider
 	// and a Project around. But having to pass the provider as an argument to
