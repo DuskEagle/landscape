@@ -7,7 +7,6 @@ import (
 	landscape "github.com/DuskEagle/landscape/pkg"
 	"github.com/DuskEagle/landscape/pkg/backend/gcs"
 	"github.com/DuskEagle/landscape/pkg/providers/aws"
-	"github.com/DuskEagle/landscape/pkg/types"
 )
 
 func main() {
@@ -48,12 +47,12 @@ func run(ctx context.Context) (err error) {
 	// With this "Upsert" method, we must pattern-match the arg to the resource.
 	// Create a VPC. Upsert() begins creating the VPC and returns a promise.
 	// Fields on the promise will cause other
-	vpc, err := provider.VPC(ctx, "myvpc", &aws.VPCArgs{
-		Name:      types.String("myvpc"),
-		CIDRRange: types.String("10.0.0.0/16"),
+	vpc, err := provider.Upsert(ctx, "myvpc", &aws.VPC{
+		Name:      "myvpc",
+		CIDRRange: "10.0.0.0/16",
 	})
 
-	subnet, err := provider.Subnet(ctx, "mysubnet", &aws.SubnetArgs{
+	subnet, err := provider.Upsert(ctx, "mysubnet", &aws.Subnet{
 		Name:      "mysubnet",
 		VPC:       vpc,
 		CIDRRange: "10.0.0.0/24",
@@ -68,23 +67,26 @@ func run(ctx context.Context) (err error) {
 
 	// Upsert() might take a variadic list of options, such as .Protect().
 	// .Protect would prevent against accidental deletion.
-	igw, err := provider.InternetGateway(ctx, "myinternetgateway", &aws.InternetGatewayArgs{}, landscape.Protect())
+	igw, err := provider.Upsert(ctx, "myinternetgateway", &aws.InternetGateway{}, landscape.Protect())
 
-	routeTable, err := provider.RouteTable(ctx, "myroutetable", &aws.RouteTableArgs{
+	routeTable, err := provider.Upsert(ctx, "myroutetable", &aws.RouteTable{
 		Name: "myroutetable",
 	})
 
-	route, err := provider.Route(ctx, "route1", &aws.RouteArgs{
+	route, err := provider.Upsert(ctx, "route1", &aws.Route{
 		RouteTable:  routeTable,
 		Destination: "0.0.0.0/0",
 		NextHop:     igw,
 	})
 
 	// Now delete the route.
-	// Thought: Maybe we'd want to be able to import resources if they exist,
-	// not create them if they don't exist, so they could be deleted by
-	// landscape without being created by it? Anyway, this is a long way off.
-	if err := provider.Delete("route1", provider); err != nil {
+	// WIP on how this should be exposed.
+	// Unless provider has some delete method, we need to do this on the project
+	// level. Having a GetProject method avoids having to pass both a provider
+	// and a Project around. But having to pass the provider as an argument to
+	// .Delete is annoying.
+	if err := provider.GetProject().Delete("route1", provider); err != nil {
 		return err
 	}
+
 }
