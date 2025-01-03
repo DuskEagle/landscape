@@ -38,11 +38,11 @@ func run(ctx context.Context) (err error) {
 	// before exiting this code block. Otherwise, cancel any ongoing promises
 	// and return the original error.
 	defer func() {
-		//if err != nil {
-		//	provider.Cancel(ctx)
-		//} else {
-		//	err = provider.AwaitAll(ctx)
-		//}
+		if err != nil {
+			provider.Cancel(ctx)
+		} else {
+			err = provider.AwaitAll(ctx)
+		}
 	}()
 
 	// With this "Upsert" method, we must pattern-match the arg to the resource.
@@ -65,6 +65,20 @@ func run(ctx context.Context) (err error) {
 	if err := subnet.Await(ctx); err != nil {
 		return err
 	}
+
+	// Upsert() might take a variadic list of options, such as .Protect().
+	// .Protect would prevent against accidental deletion.
+	igw, err := provider.InternetGateway(ctx, "myinternetgateway", &aws.InternetGatewayArgs{}, landscape.Protect())
+
+	routeTable, err := provider.RouteTable(ctx, "myroutetable", &aws.RouteTableArgs{
+		Name: "myroutetable",
+	})
+
+	route, err := provider.Route(ctx, "route1", &aws.RouteArgs{
+		RouteTable:  routeTable,
+		Destination: "0.0.0.0/0",
+		NextHop:     igw,
+	})
 
 	// Now delete the route.
 	// Thought: Maybe we'd want to be able to import resources if they exist,

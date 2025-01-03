@@ -1,30 +1,26 @@
 package types
 
-import "github.com/DuskEagle/landscape/pkg/resource"
-
-type StringOutput *stringOutput
-
-type stringOutput struct {
-	s string
-	// Can this work??
-	resource resource.Resource
-	await    func(resource.Resource) string
+type StringInput interface {
+	Await() string
 }
 
-func String(s string) StringOutput {
-	return &stringOutput{
-		s: s,
+type StringOutput struct{ *stringOutputInternal }
+
+type stringOutputInternal struct {
+	f func() string
+}
+
+func (s *stringOutputInternal) Await() string {
+	return s.f()
+}
+
+func String(s string) StringInput {
+	return &stringOutputInternal{
+		f: func() string { return s },
 	}
 }
 
-// TODO(joel): If this works, it needs to be hidden.
-func StringInternal(resource resource.Resource, await func(resource resource.Resource) string) StringOutput {
-	return &stringOutput{
-		resource: resource,
-		await:    await,
-	}
-}
-
-func (s *stringOutput) String() string {
-	return s.await(s.resource)
+// TODO(joel): Make this hidden?
+func NewStringOutput(f func() string) StringOutput {
+	return StringOutput{&stringOutputInternal{f: f}}
 }
