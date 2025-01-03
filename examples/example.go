@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 
 	landscape "github.com/DuskEagle/landscape/pkg"
@@ -45,15 +46,12 @@ func run(ctx context.Context) (err error) {
 		//}
 	}()
 
-	// With this "Upsert" method, we must pattern-match the arg to the resource.
-	// Create a VPC. Upsert() begins creating the VPC and returns a promise.
-	// Fields on the promise will cause other
-	vpc, err := provider.VPC(ctx, "myvpc", &aws.VPCArgs{
+	vpc, err := provider.MakeVPC(ctx, "myvpc", &aws.VPCArgs{
 		Name:      types.String("myvpc"),
 		CIDRRange: types.String("10.0.0.0/16"),
 	})
 
-	subnet, err := provider.Subnet(ctx, "mysubnet", &aws.SubnetArgs{
+	subnet, err := provider.MakeSubnet(ctx, "mysubnet", &aws.SubnetArgs{
 		Name:      types.String("mysubnet"),
 		VPC:       vpc.ID,
 		CIDRRange: types.String("10.0.0.0/24"),
@@ -66,11 +64,14 @@ func run(ctx context.Context) (err error) {
 		return err
 	}
 
-	// Now delete the route.
-	// Thought: Maybe we'd want to be able to import resources if they exist,
-	// not create them if they don't exist, so they could be deleted by
-	// landscape without being created by it? Anyway, this is a long way off.
-	if err := provider.Delete("route1", provider); err != nil {
+	subnetFromProvider, err := provider.GetSubnet(ctx, "mysubnet")
+
+	// Now delete the subnet.
+	if err := provider.DeleteSubnet(ctx, subnetFromProvider.ResourceID); err != nil {
 		return err
 	}
+
+	fmt.Println(subnet.ID.Await())
+
+	return nil
 }

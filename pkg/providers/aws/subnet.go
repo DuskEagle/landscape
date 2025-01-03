@@ -4,6 +4,7 @@ import (
 	"context"
 	"sync"
 
+	"github.com/DuskEagle/landscape/pkg/providers"
 	"github.com/DuskEagle/landscape/pkg/resource"
 	"github.com/DuskEagle/landscape/pkg/types"
 )
@@ -15,11 +16,12 @@ type SubnetArgs struct {
 }
 
 type SubnetOutput struct {
-	wg        *sync.WaitGroup
-	ID        types.StringOutput
-	Name      types.StringOutput
-	VPC       types.StringOutput
-	CIDRRange types.StringOutput
+	ResourceID types.ResourceID
+	wg         *sync.WaitGroup
+	ID         types.StringOutput
+	Name       types.StringOutput
+	VPC        types.StringOutput
+	CIDRRange  types.StringOutput
 }
 
 type subnetInternal struct {
@@ -31,15 +33,30 @@ type subnetInternal struct {
 
 var _ resource.Resource = &SubnetOutput{}
 
-func (a *AWSProvider) Subnet(ctx context.Context, id string, args *SubnetArgs) (*SubnetOutput, error) {
+func (a *AWSProvider) MakeSubnet(
+	ctx context.Context,
+	id types.ResourceID,
+	subnetArgs *SubnetArgs,
+	options ...providers.MakeOption,
+) (*SubnetOutput, error) {
 	var wg sync.WaitGroup
 	wg.Add(1)
+
 	internal := &subnetInternal{}
 	go func() {
 		defer wg.Done()
-		// Make AWS call to create Subnet here. Populate result into SunbetInternal.
+		// Make AWS call to create GetSubnet here. Populate result into SunbetInternal.
+		// The code below is a fake of that process.
+		*internal = subnetInternal{
+			ID:        "subnet-abcde",
+			Name:      subnetArgs.Name.Await(),
+			VPC:       subnetArgs.VPC.Await(),
+			CIDRRange: subnetArgs.CIDRRange.Await(),
+		}
 	}()
+
 	return &SubnetOutput{
+		wg: &wg,
 		ID: types.NewStringOutput(func() string {
 			wg.Wait()
 			return internal.ID
@@ -57,6 +74,16 @@ func (a *AWSProvider) Subnet(ctx context.Context, id string, args *SubnetArgs) (
 			return internal.CIDRRange
 		}),
 	}, nil
+}
+
+func (a *AWSProvider) GetSubnet(ctx context.Context, id types.ResourceID) (*SubnetOutput, error) {
+	// TODO(joel): Fetch from provider.
+	return &SubnetOutput{}, nil
+}
+
+func (a *AWSProvider) DeleteSubnet(ctx context.Context, id types.ResourceID) error {
+	// TODO(joel): Implement
+	return nil
 }
 
 // TODO(joel): Have a way to signal error.

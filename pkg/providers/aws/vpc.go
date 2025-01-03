@@ -4,6 +4,7 @@ import (
 	"context"
 	"sync"
 
+	"github.com/DuskEagle/landscape/pkg/providers"
 	"github.com/DuskEagle/landscape/pkg/resource"
 	"github.com/DuskEagle/landscape/pkg/types"
 )
@@ -28,13 +29,18 @@ type vpcInternal struct {
 
 var _ resource.Resource = &VPCOutput{}
 
-func (a *AWSProvider) VPC(ctx context.Context, id string, args *VPCArgs) (*VPCOutput, error) {
+func (a *AWSProvider) MakeVPC(
+	ctx context.Context,
+	id types.ResourceID,
+	args *VPCArgs,
+	options ...providers.MakeOption,
+) (*VPCOutput, error) {
 	var wg sync.WaitGroup
 	wg.Add(1)
 	internal := &vpcInternal{}
 	go func() {
 		defer wg.Done()
-		// Make AWS call to create VPC here. Populate result into VPCInternal.
+		// Make AWS call to create MakeVPC here. Populate result into VPCInternal.
 	}()
 	return &VPCOutput{
 		ID: types.NewStringOutput(func() string {
